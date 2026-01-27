@@ -1,2 +1,2 @@
 # TabularML
-code for Tabular ML
+Tabular_main.py contains all the code for model configuration, training, and evaluation.
