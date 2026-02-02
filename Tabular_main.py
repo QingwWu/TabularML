@@ -106,7 +106,20 @@ def delong_test(y_true, y_pred1, y_pred2):
     p_value = 2 * (1 - scipy.stats.norm.cdf(np.abs(z_score)))
     return p_value
 
-folder_path = "/data/Medical_ML/Tabular/processed_data"
+def impute_features(df_train_test, continuous_features, categorical_features):
+    df_train_test_new = df_train_test.copy()
+    for col in continuous_features:
+        if col in df_train_test_new.columns:
+            mean_val = df_train_test_new[col].mean()
+            df_train_test[col] = df_train_test[col].fillna(mean_val)
+    for col in categorical_features:
+        if col in df_train_test.columns:
+            mode_val = df_train_test[col].mode()
+            if not mode_val.empty:
+                df_train_test[col] = df_train_test[col].fillna(mode_val[0])
+    return df_train_test
+
+folder_path = "/data/Medical_ML/Tabular/all_data" # 存放了8个excel表格
 all_data = []
 all_numerical_features = []
 all_categorical_features = []
@@ -118,7 +131,7 @@ for filename in file_list_order:
         try:
             df = pd.read_excel(file_path)
             print(f"原始数据：{df.shape[0]}行，{df.shape[1]}列")
-            numerical_feature, categorical_feature = get_feature_types(df.drop(columns=['label',"source_file"]))
+            numerical_feature, categorical_feature = get_feature_types(df.drop(columns=['label']))
             all_numerical_features.append(numerical_feature)
             all_categorical_features.append(categorical_feature)
             all_data.append(df)
@@ -126,13 +139,12 @@ for filename in file_list_order:
         except Exception as e:
             print(f"读取 {filename} 失败：{str(e)}")
 
-
 for dID in range(1,8):
     print(f"=============== 开始第{dID}个数据集 =====================")
     output_path = "/data/Medical_ML/Tabular/results/"
     numerical_features = all_numerical_features[dID]
-    categorical_features = all_categorical_features[dID]
-    X = all_data[dID].drop(columns=['label',"source_file"])
+    categorical_features = all_categorical_features[dID] 
+    X = all_data[dID].drop(columns=['label'])
     y = all_data[dID]['label']
 
     data_config = DataConfig(
@@ -222,9 +234,13 @@ for dID in range(1,8):
         ('imputer', SimpleImputer(strategy='median')),
         ('scaler', MinMaxScaler())
     ])
+    categorical_transformer_for_lr = Pipeline(steps=[
+        ('imputer', SimpleImputer(strategy='most_frequent'))
+    ])
     preprocessor_for_lr = ColumnTransformer(
         transformers=[
-            ('num', numeric_transformer_for_lr, numerical_features)
+            ('num', numeric_transformer_for_lr, numerical_features),
+            ('cat', categorical_transformer_for_lr, categorical_features)
         ],
         remainder='passthrough'
     )
@@ -232,9 +248,13 @@ for dID in range(1,8):
     numeric_transformer_for_trees = Pipeline(steps=[
         ('imputer', SimpleImputer(strategy='median'))
     ])
+    categorical_transformer_for_trees = Pipeline(steps=[
+        ('imputer', SimpleImputer(strategy='most_frequent')),
+    ])
     preprocessor_for_trees = ColumnTransformer(
         transformers=[
-            ('num', numeric_transformer_for_trees, numerical_features)
+            ('num', numeric_transformer_for_trees, numerical_features),
+            ('cat', categorical_transformer_for_trees, categorical_features)
         ],
         remainder='passthrough'
     )
@@ -332,7 +352,6 @@ for dID in range(1,8):
         'test_Kappa': 'kappa',
         'test_Youden': 'Youden',
         'test_speci': 'Speci'
-
     }
 
     fig_roc, ax_roc = plt.subplots(figsize=(12, 10))
@@ -358,7 +377,8 @@ for dID in range(1,8):
                 for repeat_idx, (train_index, test_index) in enumerate(cv_strategy.split(X, y)):
                     X_train, X_test = X.iloc[train_index].copy(), X.iloc[test_index].copy()
                     y_train, y_test = y.iloc[train_index].copy(), y.iloc[test_index].copy()
-
+                    X_train = impute_features(X_train,numerical_features,categorical_features)
+                    X_test = impute_features(X_test,numerical_features,categorical_features)
                     if name == "AutoGluon":
                         train_data = pd.concat([X_train, y_train], axis=1)
                         test_data = pd.concat([X_test, y_test], axis=1)
@@ -515,6 +535,11 @@ for dID in range(1,8):
                     )
                     X_train, X_test = X.iloc[train_index], X.iloc[test_index]
                     y_train, y_test = y.iloc[train_index], y.iloc[test_index]
+
+                    X_train = impute_features(X_train,numerical_features,categorical_features)
+                    X_test = impute_features(X_test,numerical_features,categorical_features)
+
+                    X_train = impute_features(X_train,numerical_features,categorical_features)
                     train_data = pd.concat([X_train, y_train], axis=1)
                     test_data = pd.concat([X_test, y_test], axis=1)
                     tabular_model.fit(train=train_data, validation=test_data)
