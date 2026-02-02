@@ -110,14 +110,14 @@ def impute_features(df_train_test, continuous_features, categorical_features):
     df_train_test_new = df_train_test.copy()
     for col in continuous_features:
         if col in df_train_test_new.columns:
-            mean_val = df_train_test_new[col].mean()
-            df_train_test[col] = df_train_test[col].fillna(mean_val)
+            median_val = df_train_test_new[col].median()
+            df_train_test_new[col] = df_train_test_new[col].fillna(median_val)
     for col in categorical_features:
-        if col in df_train_test.columns:
-            mode_val = df_train_test[col].mode()
+        if col in df_train_test_new.columns:
+            mode_val = df_train_test_new[col].mode()
             if not mode_val.empty:
-                df_train_test[col] = df_train_test[col].fillna(mode_val[0])
-    return df_train_test
+                df_train_test_new[col] = df_train_test_new[col].fillna(mode_val[0])
+    return df_train_test_new
 
 folder_path = "/data/Medical_ML/Tabular/all_data" # 存放了8个excel表格
 all_data = []
@@ -756,3 +756,4 @@ for dID in range(1,8):
         result_df[y_pred_test_col] = y_pred_test
 
     result_df.to_excel(output_path+str(dID)+'_训练集结果.xlsx', index=False)
+
