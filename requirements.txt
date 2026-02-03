@@ -1,0 +1,14 @@
+autogluon.common==1.4.0
+autogluon.core==1.4.0
+autogluon.features==1.4.0
+autogluon.tabular==1.4.0
+catboost==1.2.8
+lightgbm==4.6.0
+matplotlib==3.10.8
+numpy==2.4.2
+pandas==3.0.0
+pytorch_tabular==1.2.0
+scikit_learn==1.8.0
+scipy==1.17.0
+tabpfn==2.2.1
+xgboost==3.1.3
